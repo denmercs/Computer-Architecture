@@ -2,12 +2,19 @@
 
 import sys
 
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        # TODO: Add list of properties to hold 256 bytes of memory -->ram
+        self.ram = [0] * 256
+        # Add 8 general-purpose registers
+        self.reg = [0] * 8
+        # Add properties for any internal registers you need --> pc (program counter)
+        self.pc = 0
+        # Any other internal registers needed?
 
     def load(self):
         """Load a program into memory."""
@@ -18,25 +25,25 @@ class CPU:
 
         program = [
             # From print8.ls8
-            0b10000010, # LDI R0,8
+            0b10000010,  # LDI R0,8
             0b00000000,
             0b00001000,
-            0b01000111, # PRN R0
+            0b01000111,  # PRN R0
             0b00000000,
-            0b00000001, # HLT
+            0b00000001,  # HLT
         ]
 
         for instruction in program:
             self.ram[address] = instruction
             address += 1
 
-
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "MUL": # --> multiply two register values
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -60,6 +67,81 @@ class CPU:
 
         print()
 
+    # MAR contains the address that IS being read or written to
+    # MDR contains the data that WAS read or the data to write
+
+    def ram_read(self, mar): #access' the RAM inside the CPU object
+        """
+        Accepts the address to read and returns the value stored in memory.
+
+        The MAR contains the address that is being read or written to.
+        """
+
+        return self.ram[mar]
+
+
+
+    def ram_write(self, mar, mdr):# access; the RAM inside the CPU object
+        """
+        Accepts a value to write, and the address to write to
+
+        The MDR contains the data that was read or the data to write
+        """
+        self.ram[mar] = mdr
+
+
     def run(self):
         """Run the CPU."""
-        pass
+        LDI = 0b10000010
+        PRN = 0b01000111
+        HLT = 0b00000001
+        MUL = 0b10100010
+
+        running = True
+
+        while running:
+            # Execute instructions
+
+            # needs to read the memory address that's stored in register PC, and store that result in IR
+            ir = self.ram_read(self.pc)
+
+            # Use ram_read to read the bytes at PC + 1 and PC + 2 from ram variables operand_a and operand_b
+            # which are equivalent to each other
+            # operand_a: 00000000 --> R0 (register at index 0 in memory) is equal to
+            # operand_b: 00001000 --> The value 8
+
+
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
+
+            # print("while statement", ir)
+
+            if ir == LDI: # --> Set the value of a register to an integer.
+                # print("LDI statement", LDI )
+                                                                          #        R0    LDI
+                # print('operands a',operand_a, self.ram[operand_a]  )    # prints 0 and 130
+                #                                                         #      value    R0
+                # print('operands b',operand_b, self.ram[operand_b] )     # prints 8  and 0
+                # print('operands',operand_a  )
+                self.reg[operand_a] = operand_b
+                self.pc += 3
+
+            elif ir == MUL: # --> Multiply the values  using ALU
+                #use ALU --> what arguments does it take
+                self.alu("MUL", operand_a, operand_b)
+                self.pc += 3
+
+            elif ir == PRN: # --> /Print to the console the decimal integer value that is stored in the given register.
+                reg = self.ram_read(self.pc + 1)
+                self.reg[reg]
+                print(f"{self.reg[reg]} in now in the register")
+                self.pc += 2
+
+            elif ir == HLT: # Halt --> halt operations
+                print("Operations have been halted")
+                running = False
+                self.pc +=1
+
+            else:
+                print(f"Error, unknown command {ir}")
+                sys.exit(1)
